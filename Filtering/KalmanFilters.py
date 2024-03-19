@@ -37,21 +37,7 @@ class EnsembleKalmanFilter:
         self.obs_cov = obs_cov
     
     def dataAssimilation(self, current_state_mat, obs_vec):
-        # input: current_state_mat (current state(from forecast)), observationVec (vector of observations), 
-        #        currStateCovariance (covarianceMatrix of the current state), 
-        #        observationCovariance (covariance matrix of observations)
-        # output: assimilatedState (state after assimilating the data from the observations)
-        #        assimilatedStateCovariance (covariance matrix of the assimilated state)
-        
-        # h = observationVec - np.dot(self.observationMatrix, currState)
-        # Pinv = np.linalg.inv(self.observationCovariance + np.dot(self.observationMatrix, 
-        #                                                     np.dot(currStateCovariance, 
-        #                                                            np.transpose(self.observationMatrix))))
-        # r = np.dot(self.observationMatrix, np.transpose(currStateCovariance))
-        # assimilatedState = currState + np.dot(np.transpose(r), np.dot(Pinv, h))
-        # assimilatedStateCovariance = currStateCovariance - np.dot(np.transpose(r), np.dot(Pinv, r))
-        
-        # return [assimilatedState, assimilatedStateCovariance]
+        # TODO
         pass
     
     def modelPropagation(self, updated_state):
@@ -66,4 +52,10 @@ class EnsembleKalmanFilter:
     
 class UnscentedKalmanFilter:
     def __init__(self) -> None:
+        # TODO
+        pass
+    
+class ExtendedKalmanFilter:
+    def __init__(self) -> None:
+        # TODO
         pass
