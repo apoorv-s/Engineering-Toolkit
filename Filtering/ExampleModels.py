@@ -32,7 +32,7 @@ class SimpleModel():
         if(current_time <= 30):
             obs = self.phi*(current_state**2)
         else:
-            obs = self.phi*(current_state**2) - 2
+            obs = self.phi*(current_state**2)
             
         if with_noise:
             obs = obs + self.obs_noise_distribution.rvs()
