@@ -180,7 +180,7 @@ class Transformer(nn.Module):
     def forward(self):
         pass
     
-class PoseTranformerDiffusion(nn.Module):
+class ExampleTranformer(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         
