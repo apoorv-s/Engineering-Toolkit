@@ -179,8 +179,9 @@ class Transformer(nn.Module):
         
     def forward(self):
         pass
+ 
     
-class ExampleTranformer(nn.Module):
+class ExampleTransformer(nn.Module):
     def __init__(self, config) -> None:
         super().__init__()
         
@@ -266,3 +267,5 @@ class ExampleTranformer(nn.Module):
         x = self.out_layer(x)
         x = x.reshape(batch_size, self.x_dim)
         return x
+    
+    

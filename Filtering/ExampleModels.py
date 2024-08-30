@@ -48,6 +48,35 @@ class SimpleModel():
         obs_diff = true_observation - predicted_observation + self.obs_noise_mean
         return obs_diff, self.obs_noise_distribution.pdf(obs_diff)
         
+
+
+class ModelClassTemplate():
+    """Template class for dynamic model to be compatible with filter implementations
+    """
+    def __init__(self) -> None:
+        # can take any number of arguments
+        pass
+        
+    def forward_model(self, current_state, current_time, aux_data, noise):
+        # fixed arguments
+        # needs to generate with noise and without noise forward models
+        # return state like
+        pass
+            
+    def transition_probability(self, current_state, current_time, next_state):
+        # fixed arguments
+        # return noise, likelihood
+        pass
+    
+    def observation_operator(self, current_state, current_time, aux_data, noise):
+        # fixed arguments
+        # return obs
+        pass
+            
+    def observation_likelihood(self, current_state, current_time, true_observation):
+        # Fixed arguments
+        # return obs_diff, obs_likelihood
+        pass
         
     
     

@@ -10,6 +10,7 @@ Python Implementation of commonly used tools and techniques
     2. Kalman Filters
         a. Kalman Filter
         b. Unscented Kalman Filter
+        c. Ensemble Kalman Filter
 
 ## Machine Learning
 
@@ -17,6 +18,8 @@ Python Implementation of commonly used tools and techniques
         a. Linear Regression
         b. Gaussian Processes
     2. Transformers
+    3. ML Tools
+        a. ResNet
 
 ## Numerical Methods
     
