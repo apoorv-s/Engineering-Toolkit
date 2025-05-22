@@ -187,6 +187,122 @@ class UnscentedPF():
         return [updated_weights, obs_likelihoods, transition_probs]
 
 
+class AuxiliaryPF():
+    def __init__(self, n_particles:int, state_dim:int, obs_dim:int, model:ModelClassTemplate) -> None:
+        self.n_particles = n_particles
+        self.state_dim = state_dim
+        self.obs_dim = obs_dim
+        self.model = model
+    
+    def first_stage_sampling(self, current_state_ens, current_time, prior_weights, propagated_time, prop_true_obs, multiprocessing):
+        predictive_means = np.zeros((self.n_particles, self.state_dim))
+        predictive_likelihood = np.zeros(self.n_particles)
+        
+        fs_aux_data = {"with_noise": False, "with_mean": True}
+        if multiprocessing:
+            def first_stage_helper(i):
+                # Propagate state to calculate predictive mean
+                propagated_state = self.model.forward_model(current_state_ens[i], current_time, fs_aux_data)
+                # Calculate likelihood with respect to next observation
+                _, likelihood = self.model.observation_likelihood(propagated_state, propagated_time, prop_true_obs)
+                return propagated_state, likelihood
+                
+            with Pool(processes=cpu_count()) as pool:
+                results = pool.map(first_stage_helper, range(self.n_particles))
+                
+            predictive_means, predictive_likelihood = zip(*results)
+            predictive_means = np.array(predictive_means)
+            predictive_likelihood = np.array(predictive_likelihood)
+                
+        else:
+            for i in range(self.n_particles):
+                # Propagate state to calculate predictive mean
+                predictive_means[i] = self.model.forward_model(current_state_ens[i], current_time, fs_aux_data)
+                # Calculate likelihood with respect to next observation
+                _, predictive_likelihood[i] = self.model.observation_likelihood(predictive_means[i], propagated_time, prop_true_obs)
+                
+        auxiliary_weights = prior_weights * predictive_likelihood
+        # Normalize auxiliary weights
+        if np.sum(auxiliary_weights) > 0:
+            auxiliary_weights = auxiliary_weights / np.sum(auxiliary_weights)
+        else:
+            # If all weights are zero, revert to prior weights
+            auxiliary_weights = prior_weights.copy()
+            
+        # Sample indices based on auxiliary weights
+        indices = np.random.choice(self.n_particles, size=self.n_particles, p=auxiliary_weights)
+        
+        # Select the particles based on the sampled indices
+        aux_state_ens = current_state_ens[indices, :]
+        aux_state_pred_likelihood = predictive_likelihood[indices]
+        
+        return [aux_state_ens, aux_state_pred_likelihood]
+        
+        
+    
+    def propagation(self, aux_current_state_ens, current_time, aux_data, multiprocessing):
+        """Propagation using transition density
+
+        Args:
+            current_states (ndarray): n_particles x state_dim
+            current_time (any): required for forward model
+            aux_data (any): additional arguments for forward model, must have with_noise argument
+
+        Returns:
+            ndarray: returns states sampled from p(x_k | x_{k - 1}).
+        """
+        if multiprocessing:
+            # To prevent repeated sampling of same random numbers
+            noises = self.model.forward_noise_distribution.rvs((self.n_particles, self.state_dim))
+            def propagation_helper(i_par):
+                return self.model.forward_model(aux_current_state_ens[i_par, ...], current_time, aux_data, noises[i_par])
+            with Pool(nodes=cpu_count()) as pool:
+                propagated_states = pool.map(propagation_helper, range(self.n_particles))
+            propagated_states = np.array(propagated_states)
+        else:
+            propagated_states = np.zeros_like(aux_current_state_ens)
+            for i_par in range(self.n_particles):
+                propagated_states[i_par, ...] = self.model.forward_model(aux_current_state_ens[i_par, ...],
+                                                                        current_time, aux_data)
+        return propagated_states
+    
+    def weight_update(self, current_state_ens, current_time, current_obs, aux_state_pred_likelihood, multiprocessing):
+        """Updating weights of the particles in the particle filter
+
+        Args:
+            current_state_ens (ndarray): (n_particles, state_dim) - at current time
+            current_obs (ndarray): (obs_dim, )
+            auxiliary_weights (ndarray): (n_particles, )
+            prior_weights (ndarray): (n_particles, )
+
+        Returns:
+            List[ndarray]: updated_weights (n_particles, ), obs_likelihoods (n_particles, ), transition_probs (n_particles, )
+        """
+        
+        if multiprocessing:
+            def weight_update_helper(i_par):
+                _, obs_likelihood = self.model.observation_likelihood(current_state_ens[i_par, :], current_time, current_obs)
+                return obs_likelihood
+            
+            with Pool(nodes=cpu_count()) as pool:
+                obs_likelihoods = pool.map(weight_update_helper, range(self.n_particles))
+            
+            obs_likelihoods = np.array(obs_likelihoods).reshape(self.n_particles)
+            
+        else:
+            obs_likelihoods = np.zeros(self.n_particles)
+            for i in range(self.n_particles):
+                _, obs_likelihoods[i] = self.model.observation_likelihood(current_state_ens[i], current_time, current_obs)
+        
+        updated_weights = obs_likelihoods/(aux_state_pred_likelihood + 1e-10)
+              
+        if np.sum(updated_weights) == 0:
+            updated_weights[:] = 0
+        else:
+            updated_weights = updated_weights/np.sum(updated_weights)
+        return updated_weights
+
+
 class PFUtils():
     def __init__(self, pf_obj) -> None:
         self.pf_obj = pf_obj
